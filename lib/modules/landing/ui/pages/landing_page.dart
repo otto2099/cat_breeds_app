@@ -1,18 +1,17 @@
-// [IMPORTS]
 import 'dart:async';
+import 'package:cat_breeds_app/modules/landing/ui/widgets/breed_list_view.dart';
+import 'package:cat_breeds_app/modules/landing/ui/widgets/search_history_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_event.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_state.dart';
-import 'package:go_router/go_router.dart';
-import 'package:shimmer/shimmer.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
 
   @override
-  _LandingScreenState createState() => _LandingScreenState();
+  State<LandingScreen> createState() => _LandingScreenState();
 }
 
 class _LandingScreenState extends State<LandingScreen> {
@@ -94,117 +93,6 @@ class _LandingScreenState extends State<LandingScreen> {
     super.dispose();
   }
 
-  Widget _buildBreedCard(dynamic breed) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: Image.network(
-                  breed.image.url,
-                  height: 500,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: Container(
-                        height: 500,
-                        width: double.infinity,
-                        color: Colors.grey.shade300,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: Container(
-                        height: 500,
-                        width: double.infinity,
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                          child: Icon(Icons.error, color: Colors.red, size: 50),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              _buildBreedCardHeader(breed.name),
-            ],
-          ),
-          _buildBreedCardFooter(breed),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBreedCardHeader(String name) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildCardLabel(name, Alignment.topLeft),
-        _buildCardLabel('Más', Alignment.topRight),
-      ],
-    );
-  }
-
-  Widget _buildCardLabel(String text, Alignment alignment) {
-    return Align(
-      alignment: alignment,
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBreedCardFooter(dynamic breed) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.flag, size: 16),
-              const SizedBox(width: 4),
-              Text(breed.origin),
-            ],
-          ),
-          Row(
-            children: [
-              const Icon(Icons.school, size: 16),
-              const SizedBox(width: 4),
-              Text('Inteligencia: ${breed.intelligence}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -235,7 +123,9 @@ class _LandingScreenState extends State<LandingScreen> {
                     icon: const Icon(Icons.clear),
                     onPressed: () {
                       _searchController.clear();
-                      context.read<LandingBloc>().add(LoadCatImages(page: 0));
+                      context.read<LandingBloc>().add(
+                        SearchCatImages(query: ' ', page: 1),
+                      );
                       setState(() => _showHistory = true);
                     },
                   ),
@@ -264,98 +154,42 @@ class _LandingScreenState extends State<LandingScreen> {
               Expanded(
                 child:
                     (_showHistory && _localSearchHistory.isNotEmpty)
-                        ? _buildSearchHistory()
-                        : _buildBreedList(),
+                        ? SearchHistoryList(
+                          history: _localSearchHistory,
+                          onSelect: (term) {
+                            _searchController.text = term;
+                            _searchFocusNode.unfocus();
+                            setState(() => _showHistory = false);
+                            context.read<LandingBloc>().add(
+                              SearchCatImages(query: term, page: 0),
+                            );
+                          },
+                          onClear: () {
+                            context.read<LandingBloc>().add(
+                              ClearSearchHistory(),
+                            );
+                            context.read<LandingBloc>().add(
+                              LoadSearchHistory(),
+                            );
+                          },
+                        )
+                        : BreedListView(
+                          scrollController: _scrollController,
+                          breeds: _breeds,
+                          onRefresh: () async {
+                            _searchController.clear();
+                            FocusScope.of(context).unfocus();
+                            setState(() => _showHistory = false);
+                            context.read<LandingBloc>().add(
+                              SearchCatImages(query: ' ', page: 1),
+                            );
+                          },
+                        ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSearchHistory() {
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Historial de búsqueda',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () {
-                  context.read<LandingBloc>().add(ClearSearchHistory());
-                  context.read<LandingBloc>().add(LoadSearchHistory());
-                },
-                child: const Text('Limpiar'),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.separated(
-              itemCount: _localSearchHistory.length,
-              itemBuilder: (_, index) {
-                final term = _localSearchHistory[index];
-                return ListTile(
-                  leading: const Icon(Icons.history),
-                  title: Text(term),
-                  onTap: () {
-                    _searchController.text = term;
-                    _searchFocusNode.unfocus();
-                    setState(() => _showHistory = false);
-                    context.read<LandingBloc>().add(
-                      SearchCatImages(query: term, page: 0),
-                    );
-                  },
-                );
-              },
-              separatorBuilder: (_, __) => const Divider(height: 1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBreedList() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _searchController.clear();
-        FocusScope.of(context).unfocus();
-        setState(() => _showHistory = false);
-        context.read<LandingBloc>().add(LoadCatImages(page: 0));
-      },
-      child:
-          (_breeds.isNotEmpty
-              ? CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index == _breeds.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: SizedBox.shrink()),
-                        );
-                      }
-                      final breed = _breeds[index];
-                      return GestureDetector(
-                        onTap: () {
-                          context.go('/detail', extra: breed);
-                        },
-                        child: _buildBreedCard(breed),
-                      );
-                    }, childCount: _breeds.length + 1),
-                  ),
-                ],
-              )
-              : const Center(child: Text("No hay imágenes disponibles"))),
     );
   }
 }
