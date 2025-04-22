@@ -17,7 +17,9 @@ class SplashScreen extends StatelessWidget {
         listener: (context, state) {
           if (state is SplashLoaded) {
             Future.delayed(const Duration(seconds: 2), () {
-              context.go('/landing');
+              if (context.mounted) {
+                context.go('/landing');
+              }
             });
           } else if (state is SplashError) {
             ScaffoldMessenger.of(

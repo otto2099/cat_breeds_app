@@ -173,9 +173,7 @@ class BreedDetailScreen extends StatelessWidget {
 
   Widget _buildExternalLink(String label, String url) {
     return GestureDetector(
-      onTap: () {
-        print('Abriendo enlace: $url');
-      },
+      onTap: () {},
       child: Card(
         elevation: 5.0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

@@ -1,5 +1,4 @@
 import 'package:cat_breeds_app/core/entities/entity_model.dart';
-import 'package:cat_breeds_app/core/models/breeds_models.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
