@@ -18,7 +18,7 @@ class LocalSearchHistoryService {
   }
 
   Future<void> clearSearchHistory() async {
-    var box = Hive.box<String>(Collections.searchHistory);
+    var box = Hive.box(Collections.searchHistory);
     box.clear();
   }
 
