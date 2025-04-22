@@ -12,8 +12,7 @@ class BreedDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Detalle: ${breed.name}'),
-        backgroundColor: Colors.teal,
+        title: Text(breed.name),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios),
           onPressed: () {
@@ -144,6 +143,8 @@ class BreedDetailScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
+
+                              SizedBox(height: 20),
                               SizedBox(height: 20),
                               _buildExternalLink(
                                 'Wikipedia',

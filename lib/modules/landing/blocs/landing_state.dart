@@ -15,3 +15,8 @@ class LandingError extends LandingState {
   final String message;
   LandingError({required this.message});
 }
+
+class SearchHistoryLoaded extends LandingState {
+  final List<String> searchHistory;
+  SearchHistoryLoaded({required this.searchHistory});
+}

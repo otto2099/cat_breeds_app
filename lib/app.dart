@@ -1,6 +1,7 @@
 import 'package:cat_breeds_app/core/routes/app_router.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/services/breed_image_service.dart';
+import 'package:cat_breeds_app/modules/landing/services/local_search_history_service.dart';
 import 'package:cat_breeds_app/modules/landing/ui/pages/landing_page.dart';
 import 'package:cat_breeds_app/modules/splash/blocs/splash_bloc.dart';
 import 'package:cat_breeds_app/modules/splash/blocs/splash_event.dart';
@@ -26,7 +27,11 @@ class App extends StatelessWidget {
           child: LandingScreen(),
         ),
         BlocProvider(
-          create: (_) => LandingBloc(catImageService: BreedImageService()),
+          create:
+              (_) => LandingBloc(
+                catImageService: BreedImageService(),
+                localSearchHistoryService: LocalSearchHistoryService(),
+              ),
           child: LandingScreen(),
         ),
       ],

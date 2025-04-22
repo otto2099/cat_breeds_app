@@ -39,6 +39,7 @@ class _LandingScreenState extends State<LandingScreen> {
 
       if (query.isNotEmpty) {
         context.read<LandingBloc>().add(SearchCatImages(query: query, page: 0));
+        context.read<LandingBloc>().add(AddSearchTerm(searchTerm: query));
       } else {
         context.read<LandingBloc>().add(LoadCatImages(page: 0));
       }

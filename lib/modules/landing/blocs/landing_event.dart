@@ -11,3 +11,12 @@ class SearchCatImages extends LandingEvent {
 
   SearchCatImages({required this.query, required this.page});
 }
+
+class AddSearchTerm extends LandingEvent {
+  final String searchTerm;
+  AddSearchTerm({required this.searchTerm});
+}
+
+class LoadSearchHistory extends LandingEvent {}
+
+class ClearSearchHistory extends LandingEvent {}
