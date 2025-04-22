@@ -16,9 +16,9 @@ class LandingScreen extends StatefulWidget {
 }
 
 class _LandingScreenState extends State<LandingScreen> {
-  late ScrollController _scrollController;
-  late TextEditingController _searchController;
-  late FocusNode _searchFocusNode;
+  late final ScrollController _scrollController;
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
   bool _showHistory = false;
   bool _isLoadingMore = false;
   List<String> _localSearchHistory = [];
@@ -32,24 +32,29 @@ class _LandingScreenState extends State<LandingScreen> {
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
 
+    _loadInitialData();
+    _setupListeners();
+  }
+
+  void _loadInitialData() {
     context.read<LandingBloc>().add(LoadCatImages(page: 0));
     context.read<LandingBloc>().add(LoadSearchHistory());
+  }
 
+  void _setupListeners() {
     _searchFocusNode.addListener(() {
       if (_searchFocusNode.hasFocus) {
         setState(() => _showHistory = true);
         context.read<LandingBloc>().add(LoadSearchHistory());
-      } else {
-        if (_searchController.text.isEmpty) {
-          setState(() => _showHistory = false);
-          context.read<LandingBloc>().add(LoadCatImages(page: 0));
-        }
+      } else if (_searchController.text.isEmpty) {
+        setState(() => _showHistory = false);
+        context.read<LandingBloc>().add(LoadCatImages(page: 0));
       }
     });
 
     _scrollController.addListener(() {
-      final position = _scrollController.position;
-      if (position.pixels >= position.maxScrollExtent - 200 &&
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
           !_isLoadingMore) {
         _isLoadingMore = true;
         context.read<LandingBloc>().add(
@@ -64,7 +69,7 @@ class _LandingScreenState extends State<LandingScreen> {
 
     _searchController.addListener(() {
       final query = _searchController.text;
-      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce?.cancel();
       _debounce = Timer(const Duration(seconds: 2), () {
         if (query.isNotEmpty) {
           context.read<LandingBloc>().add(
@@ -135,68 +140,65 @@ class _LandingScreenState extends State<LandingScreen> {
                   },
                 ),
               ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    breed.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Más',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
+              _buildBreedCardHeader(breed.name),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.flag, size: 16),
-                    const SizedBox(width: 4),
-                    Text(breed.origin),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.school, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Inteligencia: ${breed.intelligence}'),
-                  ],
-                ),
-              ],
-            ),
+          _buildBreedCardFooter(breed),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreedCardHeader(String name) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildCardLabel(name, Alignment.topLeft),
+        _buildCardLabel('Más', Alignment.topRight),
+      ],
+    );
+  }
+
+  Widget _buildCardLabel(String text, Alignment alignment) {
+    return Align(
+      alignment: alignment,
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBreedCardFooter(dynamic breed) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.flag, size: 16),
+              const SizedBox(width: 4),
+              Text(breed.origin),
+            ],
+          ),
+          Row(
+            children: [
+              const Icon(Icons.school, size: 16),
+              const SizedBox(width: 4),
+              Text('Inteligencia: ${breed.intelligence}'),
+            ],
           ),
         ],
       ),
@@ -262,111 +264,98 @@ class _LandingScreenState extends State<LandingScreen> {
               Expanded(
                 child:
                     (_showHistory && _localSearchHistory.isNotEmpty)
-                        ? Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Historial de búsqueda',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      context.read<LandingBloc>().add(
-                                        ClearSearchHistory(),
-                                      );
-                                      context.read<LandingBloc>().add(
-                                        LoadSearchHistory(),
-                                      );
-                                    },
-                                    child: const Text('Limpiar'),
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 1),
-                              Expanded(
-                                child: ListView.separated(
-                                  itemCount: _localSearchHistory.length,
-                                  itemBuilder: (_, index) {
-                                    final term = _localSearchHistory[index];
-                                    return ListTile(
-                                      leading: const Icon(Icons.history),
-                                      title: Text(term),
-                                      onTap: () {
-                                        _searchController.text = term;
-                                        _searchFocusNode.unfocus();
-                                        setState(() => _showHistory = false);
-                                        context.read<LandingBloc>().add(
-                                          SearchCatImages(query: term, page: 0),
-                                        );
-                                      },
-                                    );
-                                  },
-                                  separatorBuilder:
-                                      (_, __) => const Divider(height: 1),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        : RefreshIndicator(
-                          onRefresh: () async {
-                            _searchController.clear();
-                            FocusScope.of(context).unfocus();
-                            setState(() => _showHistory = false);
-                            context.read<LandingBloc>().add(
-                              SearchCatImages(query: ' ', page: 0),
-                            );
-                          },
-                          child:
-                              (_breeds.isNotEmpty
-                                  ? CustomScrollView(
-                                    controller: _scrollController,
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    slivers: [
-                                      SliverList(
-                                        delegate: SliverChildBuilderDelegate((
-                                          context,
-                                          index,
-                                        ) {
-                                          if (index == _breeds.length) {
-                                            return const Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Center(
-                                                child: SizedBox.shrink(),
-                                              ),
-                                            );
-                                          }
-                                          final breed = _breeds[index];
-                                          return GestureDetector(
-                                            onTap: () {
-                                              context.go(
-                                                '/detail',
-                                                extra: breed,
-                                              );
-                                            },
-                                            child: _buildBreedCard(breed),
-                                          );
-                                        }, childCount: _breeds.length + 1),
-                                      ),
-                                    ],
-                                  )
-                                  : const Center(
-                                    child: Text("No hay imágenes disponibles"),
-                                  )),
-                        ),
+                        ? _buildSearchHistory()
+                        : _buildBreedList(),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchHistory() {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Historial de búsqueda',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<LandingBloc>().add(ClearSearchHistory());
+                  context.read<LandingBloc>().add(LoadSearchHistory());
+                },
+                child: const Text('Limpiar'),
+              ),
+            ],
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _localSearchHistory.length,
+              itemBuilder: (_, index) {
+                final term = _localSearchHistory[index];
+                return ListTile(
+                  leading: const Icon(Icons.history),
+                  title: Text(term),
+                  onTap: () {
+                    _searchController.text = term;
+                    _searchFocusNode.unfocus();
+                    setState(() => _showHistory = false);
+                    context.read<LandingBloc>().add(
+                      SearchCatImages(query: term, page: 0),
+                    );
+                  },
+                );
+              },
+              separatorBuilder: (_, __) => const Divider(height: 1),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreedList() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        _searchController.clear();
+        FocusScope.of(context).unfocus();
+        setState(() => _showHistory = false);
+        context.read<LandingBloc>().add(LoadCatImages(page: 0));
+      },
+      child:
+          (_breeds.isNotEmpty
+              ? CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      if (index == _breeds.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Center(child: SizedBox.shrink()),
+                        );
+                      }
+                      final breed = _breeds[index];
+                      return GestureDetector(
+                        onTap: () {
+                          context.go('/detail', extra: breed);
+                        },
+                        child: _buildBreedCard(breed),
+                      );
+                    }, childCount: _breeds.length + 1),
+                  ),
+                ],
+              )
+              : const Center(child: Text("No hay imágenes disponibles"))),
     );
   }
 }
