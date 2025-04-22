@@ -3,6 +3,7 @@ import 'package:cat_breeds_app/modules/landing/blocs/landing_event.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   late ScrollController _scrollController;
   late TextEditingController _searchController;
+
   @override
   void initState() {
     super.initState();
@@ -23,11 +25,9 @@ class _LandingScreenState extends State<LandingScreen> {
 
     context.read<LandingBloc>().add(LoadCatImages(page: 0));
 
-    // Detectar cuando el usuario ha llegado al final del scroll
     _scrollController.addListener(() {
       if (_scrollController.position.atEdge &&
           _scrollController.position.pixels != 0) {
-        // Cargar más imágenes cuando el usuario llega al final
         context.read<LandingBloc>().add(
           LoadCatImages(page: context.read<LandingBloc>().currentPage),
         );
@@ -36,14 +36,19 @@ class _LandingScreenState extends State<LandingScreen> {
 
     _searchController.addListener(() {
       final query = _searchController.text;
-      // context.read<LandingBloc>().add(SearchCatImages(query: query));
+
+      if (query.isNotEmpty) {
+        context.read<LandingBloc>().add(SearchCatImages(query: query, page: 0));
+      } else {
+        context.read<LandingBloc>().add(LoadCatImages(page: 0));
+      }
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -83,131 +88,163 @@ class _LandingScreenState extends State<LandingScreen> {
             }
 
             if (state is LandingLoaded) {
-              return ListView.builder(
+              return CustomScrollView(
                 controller: _scrollController,
-                itemCount: state.images.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == state.images.length) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+                slivers: [
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      if (index == state.images.length) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Center(child: SizedBox.shrink()),
+                        );
+                      }
 
-                  final image = state.images[index];
+                      final breed = state.images[index];
 
-                  return Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12),
-                              ),
-                              child: Image.network(
-                                image.url,
-                                height: 500,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (
-                                  context,
-                                  child,
-                                  loadingProgress,
-                                ) {
-                                  if (loadingProgress == null) {
-                                    return child;
-                                  } else {
-                                    return Shimmer.fromColors(
-                                      baseColor: Colors.grey.shade300,
-                                      highlightColor: Colors.grey.shade100,
-                                      child: Container(
-                                        height: 500,
-                                        width: double.infinity,
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  image.breeds.first.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'Más',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      return GestureDetector(
+                        onTap: () {
+                          context.go('/detail', extra: breed);
+                        },
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Row(
+                              Stack(
                                 children: [
-                                  const Icon(Icons.flag, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(image.breeds.first.origin),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  const Icon(Icons.school, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Inteligencia: ${image.breeds.first.intelligence}',
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12),
+                                    ),
+                                    child: Image.network(
+                                      breed.image.url,
+                                      height: 500,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (
+                                        context,
+                                        child,
+                                        loadingProgress,
+                                      ) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        } else {
+                                          return Shimmer.fromColors(
+                                            baseColor: Colors.grey.shade300,
+                                            highlightColor:
+                                                Colors.grey.shade100,
+                                            child: Container(
+                                              height: 500,
+                                              width: double.infinity,
+                                              color: Colors.grey.shade300,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return Shimmer.fromColors(
+                                          baseColor: Colors.grey.shade300,
+                                          highlightColor: Colors.grey.shade100,
+                                          child: Container(
+                                            height: 500,
+                                            width: double.infinity,
+                                            color: Colors.grey.shade300,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.error,
+                                                color: Colors.red,
+                                                size: 50,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        breed.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Más',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
                                   ),
                                 ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.flag, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(breed.origin),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.school, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Inteligencia: ${breed.intelligence}',
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    }, childCount: state.images.length + 1),
+                  ),
+                ],
               );
             }
 

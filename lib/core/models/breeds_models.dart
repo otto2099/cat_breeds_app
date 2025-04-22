@@ -1,4 +1,5 @@
 import 'package:cat_breeds_app/core/entities/entity_model.dart';
+import 'package:cat_breeds_app/core/models/image_breeds_models.dart';
 import 'package:cat_breeds_app/core/models/weight_model.dart';
 import 'package:flutter/foundation.dart';
 
@@ -31,6 +32,8 @@ class CatBreedModel extends EntityModel {
     required this.sheddingLevel,
     required this.socialNeeds,
     required this.strangerFriendly,
+    required this.wikipediaUrl,
+    required this.image,
   });
 
   final String id;
@@ -59,6 +62,8 @@ class CatBreedModel extends EntityModel {
   final int sheddingLevel;
   final int socialNeeds;
   final int strangerFriendly;
+  final String wikipediaUrl;
+  final BreedWithImageModel image;
 
   factory CatBreedModel.fromJson(Map<String, dynamic> json) {
     return CatBreedModel(
@@ -87,7 +92,12 @@ class CatBreedModel extends EntityModel {
       intelligence: json['intelligence'] ?? 0,
       sheddingLevel: json['shedding_level'] ?? 0,
       socialNeeds: json['social_needs'] ?? 0,
+      wikipediaUrl: json['wikipedia_url'] ?? '',
       strangerFriendly: json['stranger_friendly'] ?? 0,
+      image:
+          json['image'] != null
+              ? BreedWithImageModel.fromJson(json['image'])
+              : const BreedWithImageModel(id: '', url: '', width: 0, height: 0),
     );
   }
 
@@ -120,6 +130,8 @@ class CatBreedModel extends EntityModel {
       'shedding_level': sheddingLevel,
       'social_needs': socialNeeds,
       'stranger_friendly': strangerFriendly,
+      'wikipedia_url': wikipediaUrl,
+      'image': image,
     };
   }
 
@@ -152,6 +164,8 @@ class CatBreedModel extends EntityModel {
       sheddingLevel: sheddingLevel,
       socialNeeds: socialNeeds,
       strangerFriendly: strangerFriendly,
+      wikipediaUrl: wikipediaUrl,
+      image: image,
     );
   }
 }

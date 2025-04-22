@@ -1,3 +1,4 @@
+import 'package:cat_breeds_app/core/models/breeds_models.dart';
 import 'package:cat_breeds_app/modules/detail/ui/pages/detail_screen.dart';
 import 'package:cat_breeds_app/modules/landing/ui/pages/landing_page.dart';
 import 'package:cat_breeds_app/modules/splash/ui/pages/splash_page.dart';
@@ -19,11 +20,12 @@ class AppRouter {
         builder: (context, state) => LandingScreen(),
       ),
       GoRoute(
-        path: '/detail/:id',
+        path: '/detail',
         name: 'breed_detail',
         builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return BreedDetailScreen(breedId: id);
+          final breed = state.extra as CatBreedModel;
+
+          return BreedDetailScreen(breed: breed);
         },
       ),
     ],

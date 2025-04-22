@@ -5,14 +5,12 @@ import 'package:flutter/foundation.dart';
 @immutable
 class BreedWithImageModel extends EntityModel {
   const BreedWithImageModel({
-    required this.breeds,
     required this.id,
     required this.url,
     required this.width,
     required this.height,
   });
 
-  final List<CatBreedModel> breeds;
   final String id;
   final String url;
   final int width;
@@ -20,10 +18,10 @@ class BreedWithImageModel extends EntityModel {
 
   factory BreedWithImageModel.fromJson(Map<String, dynamic> json) {
     return BreedWithImageModel(
-      breeds:
-          (json['breeds'] as List)
-              .map((breedJson) => CatBreedModel.fromJson(breedJson))
-              .toList(),
+      // breeds:
+      //     (json['breeds'] as List)
+      //         .map((breedJson) => CatBreedModel.fromJson(breedJson))
+      //         .toList(),
       id: json['id'],
       url: json['url'],
       width: json['width'],
@@ -40,7 +38,7 @@ class BreedWithImageModel extends EntityModel {
   EntityModel copyWith() {
     return BreedWithImageModel(
       id: id,
-      breeds: breeds,
+      // breeds: breeds,
       url: url,
       width: width,
       height: height,
