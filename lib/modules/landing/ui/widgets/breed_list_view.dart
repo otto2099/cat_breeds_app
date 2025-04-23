@@ -1,4 +1,5 @@
 import 'package:cat_breeds_app/modules/landing/ui/widgets/breed_card.dart';
+import 'package:cat_breeds_app/ui/widgets/animated_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,7 +30,7 @@ class BreedListView extends StatelessWidget {
                       if (index == breeds.length) {
                         return const Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: Center(child: SizedBox.shrink()),
+                          child: Center(child: AnimatedLogo()),
                         );
                       }
                       final breed = breeds[index];
@@ -41,7 +42,7 @@ class BreedListView extends StatelessWidget {
                   ),
                 ],
               )
-              : const Center(child: Text("No hay imágenes disponibles"))),
+              : const Center(child: AnimatedLogo())),
     );
   }
 }

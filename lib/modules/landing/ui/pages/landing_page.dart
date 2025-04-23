@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cat_breeds_app/modules/landing/ui/widgets/breed_list_view.dart';
 import 'package:cat_breeds_app/modules/landing/ui/widgets/search_history_list.dart';
+import 'package:cat_breeds_app/ui/widgets/animated_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_bloc.dart';
@@ -18,10 +19,6 @@ class _LandingScreenState extends State<LandingScreen> {
   late final ScrollController _scrollController;
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
-  bool _showHistory = false;
-  bool _isLoadingMore = false;
-  List<String> _localSearchHistory = [];
-  List<dynamic> _breeds = [];
   Timer? _debounce;
 
   @override
@@ -31,36 +28,22 @@ class _LandingScreenState extends State<LandingScreen> {
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
 
-    _loadInitialData();
-    _setupListeners();
-  }
-
-  void _loadInitialData() {
     context.read<LandingBloc>().add(LoadCatImages(page: 0));
     context.read<LandingBloc>().add(LoadSearchHistory());
-  }
 
-  void _setupListeners() {
     _searchFocusNode.addListener(() {
       if (_searchFocusNode.hasFocus) {
-        setState(() => _showHistory = true);
         context.read<LandingBloc>().add(LoadSearchHistory());
-      } else if (_searchController.text.isEmpty) {
-        setState(() => _showHistory = false);
-        context.read<LandingBloc>().add(LoadCatImages(page: 0));
-      }
+      } else if (_searchController.text.isEmpty) {}
     });
 
     _scrollController.addListener(() {
+      final bloc = context.read<LandingBloc>();
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 200 &&
-          !_isLoadingMore) {
-        _isLoadingMore = true;
-        context.read<LandingBloc>().add(
-          LoadCatImages(page: context.read<LandingBloc>().currentPage),
-        );
+          !bloc.isLoading) {
+        bloc.add(LoadCatImages(page: bloc.currentPage));
       }
-
       if (_searchFocusNode.hasFocus) {
         _searchFocusNode.unfocus();
       }
@@ -75,11 +58,7 @@ class _LandingScreenState extends State<LandingScreen> {
             SearchCatImages(query: query, page: 0),
           );
           context.read<LandingBloc>().add(AddSearchTerm(searchTerm: query));
-          setState(() => _showHistory = false);
-        } else {
-          context.read<LandingBloc>().add(LoadCatImages(page: 0));
-          context.read<LandingBloc>().add(LoadSearchHistory());
-        }
+        } else {}
       });
     });
   }
@@ -98,10 +77,6 @@ class _LandingScreenState extends State<LandingScreen> {
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
-        if (_searchController.text.isEmpty) {
-          setState(() => _showHistory = false);
-          context.read<LandingBloc>().add(LoadCatImages(page: 0));
-        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -123,10 +98,6 @@ class _LandingScreenState extends State<LandingScreen> {
                     icon: const Icon(Icons.clear),
                     onPressed: () {
                       _searchController.clear();
-                      context.read<LandingBloc>().add(
-                        SearchCatImages(query: ' ', page: 1),
-                      );
-                      setState(() => _showHistory = true);
                     },
                   ),
                 ),
@@ -134,60 +105,46 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
         ),
-        body: BlocListener<LandingBloc, LandingState>(
-          listenWhen:
-              (previous, current) =>
-                  current is SearchHistoryLoaded || current is LandingLoaded,
-          listener: (context, state) {
-            if (state is SearchHistoryLoaded) {
-              setState(() => _localSearchHistory = state.searchHistory);
-            }
-            if (state is LandingLoaded) {
-              setState(() {
-                _breeds = state.images;
-                _isLoadingMore = false;
-              });
+        body: BlocBuilder<LandingBloc, LandingState>(
+          builder: (context, state) {
+            // final bloc = context.read<LandingBloc>();
+            final isShowingHistory =
+                _searchFocusNode.hasFocus &&
+                state is SearchHistoryLoaded &&
+                state.searchHistory.isNotEmpty;
+
+            if (isShowingHistory) {
+              return SearchHistoryList(
+                history: state.searchHistory,
+                onSelect: (term) {
+                  _searchController.text = term;
+                  _searchFocusNode.unfocus();
+                  context.read<LandingBloc>().add(
+                    SearchCatImages(query: term, page: 0),
+                  );
+                },
+                onClear: () {
+                  context.read<LandingBloc>().add(ClearSearchHistory());
+                },
+              );
+            } else if (state is LandingLoaded) {
+              return BreedListView(
+                scrollController: _scrollController,
+                breeds: state.images,
+                onRefresh: () async {
+                  _searchController.clear();
+                  FocusScope.of(context).unfocus();
+                  context.read<LandingBloc>().add(
+                    SearchCatImages(query: ' ', page: 1),
+                  );
+                },
+              );
+            } else if (state is LandingError) {
+              return Center(child: Text(state.message));
+            } else {
+              return const Center(child: AnimatedLogo());
             }
           },
-          child: Column(
-            children: [
-              Expanded(
-                child:
-                    (_showHistory && _localSearchHistory.isNotEmpty)
-                        ? SearchHistoryList(
-                          history: _localSearchHistory,
-                          onSelect: (term) {
-                            _searchController.text = term;
-                            _searchFocusNode.unfocus();
-                            setState(() => _showHistory = false);
-                            context.read<LandingBloc>().add(
-                              SearchCatImages(query: term, page: 0),
-                            );
-                          },
-                          onClear: () {
-                            context.read<LandingBloc>().add(
-                              ClearSearchHistory(),
-                            );
-                            context.read<LandingBloc>().add(
-                              LoadSearchHistory(),
-                            );
-                          },
-                        )
-                        : BreedListView(
-                          scrollController: _scrollController,
-                          breeds: _breeds,
-                          onRefresh: () async {
-                            _searchController.clear();
-                            FocusScope.of(context).unfocus();
-                            setState(() => _showHistory = false);
-                            context.read<LandingBloc>().add(
-                              SearchCatImages(query: ' ', page: 1),
-                            );
-                          },
-                        ),
-              ),
-            ],
-          ),
         ),
       ),
     );

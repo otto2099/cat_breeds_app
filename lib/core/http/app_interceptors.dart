@@ -7,7 +7,10 @@ class AppInterceptors extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     List noRequiresAuthentication = ['/auth/login', '/auth/forgot-password'];
 
-    options.headers.addAll({"x-api-key": "DEMO-API-KEY"});
+    options.headers.addAll({
+      "x-api-key":
+          "live_umw9A6kCHOGEcTfIQJ0TyeQczZoQzXBvtxvntdnoCqhLZRe2yKmDJQQkpNGLByHD",
+    });
 
     int requiresToken = noRequiresAuthentication.indexWhere(
       (endpoint) => RegExp(endpoint, multiLine: true).hasMatch(options.path),
