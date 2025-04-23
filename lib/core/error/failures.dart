@@ -64,10 +64,7 @@ class ServerFailure extends Failure {
 class CacheFailure extends Failure {
   final dynamic error;
 
-  const CacheFailure({
-    String message = "Cache error",
-    this.error,
-  }) : super(message: message);
+  const CacheFailure({super.message = "Cache error", this.error});
 
   @override
   List<Object> get props => [message, error];

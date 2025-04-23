@@ -1,255 +1,149 @@
+import 'dart:async';
+import 'package:cat_breeds_app/modules/landing/ui/widgets/breed_list_view.dart';
+import 'package:cat_breeds_app/modules/landing/ui/widgets/search_history_list.dart';
+import 'package:cat_breeds_app/ui/widgets/animated_logo.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_event.dart';
 import 'package:cat_breeds_app/modules/landing/blocs/landing_state.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:shimmer/shimmer.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
 
   @override
-  _LandingScreenState createState() => _LandingScreenState();
+  State<LandingScreen> createState() => _LandingScreenState();
 }
 
 class _LandingScreenState extends State<LandingScreen> {
-  late ScrollController _scrollController;
-  late TextEditingController _searchController;
+  late final ScrollController _scrollController;
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
 
     context.read<LandingBloc>().add(LoadCatImages(page: 0));
+    context.read<LandingBloc>().add(LoadSearchHistory());
+
+    _searchFocusNode.addListener(() {
+      if (_searchFocusNode.hasFocus) {
+        context.read<LandingBloc>().add(LoadSearchHistory());
+      } else if (_searchController.text.isEmpty) {}
+    });
 
     _scrollController.addListener(() {
-      if (_scrollController.position.atEdge &&
-          _scrollController.position.pixels != 0) {
-        context.read<LandingBloc>().add(
-          LoadCatImages(page: context.read<LandingBloc>().currentPage),
-        );
+      final bloc = context.read<LandingBloc>();
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !bloc.isLoading) {
+        bloc.add(LoadCatImages(page: bloc.currentPage));
+      }
+      if (_searchFocusNode.hasFocus) {
+        _searchFocusNode.unfocus();
       }
     });
 
     _searchController.addListener(() {
       final query = _searchController.text;
-
-      if (query.isNotEmpty) {
-        context.read<LandingBloc>().add(SearchCatImages(query: query, page: 0));
-        context.read<LandingBloc>().add(AddSearchTerm(searchTerm: query));
-      } else {
-        context.read<LandingBloc>().add(LoadCatImages(page: 0));
-      }
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(seconds: 2), () {
+        if (query.isNotEmpty) {
+          context.read<LandingBloc>().add(
+            SearchCatImages(query: query, page: 0),
+          );
+          context.read<LandingBloc>().add(AddSearchTerm(searchTerm: query));
+        } else {}
+      });
     });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('CatBreeds'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Buscar raza...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade400),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('CatBreeds'),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
+                  hintText: 'Buscar raza...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                  ),
                 ),
-                suffixIcon: Icon(Icons.search),
               ),
             ),
           ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: BlocBuilder<LandingBloc, LandingState>(
+        body: BlocBuilder<LandingBloc, LandingState>(
           builder: (context, state) {
-            if (state is LandingLoading) {
-              return Center(child: CircularProgressIndicator());
-            }
+            // final bloc = context.read<LandingBloc>();
+            final isShowingHistory =
+                _searchFocusNode.hasFocus &&
+                state is SearchHistoryLoaded &&
+                state.searchHistory.isNotEmpty;
 
-            if (state is LandingError) {
-              return Center(child: Text(state.message));
-            }
-
-            if (state is LandingLoaded) {
-              return CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index == state.images.length) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Center(child: SizedBox.shrink()),
-                        );
-                      }
-
-                      final breed = state.images[index];
-
-                      return GestureDetector(
-                        onTap: () {
-                          context.go('/detail', extra: breed);
-                        },
-                        child: Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12),
-                                    ),
-                                    child: Image.network(
-                                      breed.image.url,
-                                      height: 500,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (
-                                        context,
-                                        child,
-                                        loadingProgress,
-                                      ) {
-                                        if (loadingProgress == null) {
-                                          return child;
-                                        } else {
-                                          return Shimmer.fromColors(
-                                            baseColor: Colors.grey.shade300,
-                                            highlightColor:
-                                                Colors.grey.shade100,
-                                            child: Container(
-                                              height: 500,
-                                              width: double.infinity,
-                                              color: Colors.grey.shade300,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      errorBuilder: (
-                                        context,
-                                        error,
-                                        stackTrace,
-                                      ) {
-                                        return Shimmer.fromColors(
-                                          baseColor: Colors.grey.shade300,
-                                          highlightColor: Colors.grey.shade100,
-                                          child: Container(
-                                            height: 500,
-                                            width: double.infinity,
-                                            color: Colors.grey.shade300,
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.error,
-                                                color: Colors.red,
-                                                size: 50,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 8,
-                                    left: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black54,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        breed.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 8,
-                                    right: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black54,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Text(
-                                        'Más',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.flag, size: 16),
-                                        const SizedBox(width: 4),
-                                        Text(breed.origin),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.school, size: 16),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Inteligencia: ${breed.intelligence}',
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }, childCount: state.images.length + 1),
-                  ),
-                ],
+            if (isShowingHistory) {
+              return SearchHistoryList(
+                history: state.searchHistory,
+                onSelect: (term) {
+                  _searchController.text = term;
+                  _searchFocusNode.unfocus();
+                  context.read<LandingBloc>().add(
+                    SearchCatImages(query: term, page: 0),
+                  );
+                },
+                onClear: () {
+                  context.read<LandingBloc>().add(ClearSearchHistory());
+                },
               );
+            } else if (state is LandingLoaded) {
+              return BreedListView(
+                scrollController: _scrollController,
+                breeds: state.images,
+                onRefresh: () async {
+                  _searchController.clear();
+                  FocusScope.of(context).unfocus();
+                  context.read<LandingBloc>().add(
+                    SearchCatImages(query: ' ', page: 1),
+                  );
+                },
+              );
+            } else if (state is LandingError) {
+              return Center(child: Text(state.message));
+            } else {
+              return const Center(child: AnimatedLogo());
             }
-
-            return Center(child: Text("No hay imágenes disponibles"));
           },
         ),
       ),

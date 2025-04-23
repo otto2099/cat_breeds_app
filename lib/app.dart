@@ -3,9 +3,6 @@ import 'package:cat_breeds_app/modules/landing/blocs/landing_bloc.dart';
 import 'package:cat_breeds_app/modules/landing/services/breed_image_service.dart';
 import 'package:cat_breeds_app/modules/landing/services/local_search_history_service.dart';
 import 'package:cat_breeds_app/modules/landing/ui/pages/landing_page.dart';
-import 'package:cat_breeds_app/modules/splash/blocs/splash_bloc.dart';
-import 'package:cat_breeds_app/modules/splash/blocs/splash_event.dart';
-import 'package:cat_breeds_app/modules/splash/services/landing_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,10 +19,6 @@ class App extends StatelessWidget {
     );
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => SplashBloc(LandingService())..add(LoadBreedsEvent()),
-          child: LandingScreen(),
-        ),
         BlocProvider(
           create:
               (_) => LandingBloc(

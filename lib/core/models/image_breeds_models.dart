@@ -1,5 +1,4 @@
 import 'package:cat_breeds_app/core/entities/entity_model.dart';
-import 'package:cat_breeds_app/core/models/breeds_models.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -18,10 +17,6 @@ class BreedWithImageModel extends EntityModel {
 
   factory BreedWithImageModel.fromJson(Map<String, dynamic> json) {
     return BreedWithImageModel(
-      // breeds:
-      //     (json['breeds'] as List)
-      //         .map((breedJson) => CatBreedModel.fromJson(breedJson))
-      //         .toList(),
       id: json['id'],
       url: json['url'],
       width: json['width'],
